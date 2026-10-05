@@ -88,13 +88,36 @@ All metadata conforms to [`schemas/metafile.v1.schema.json`](schemas/metafile.v1
     "createdAt": "2026-10-05T17:45:00Z",
     "deviceId": "phone-android-bbf100",
     "host": "nvidia"
+  },
+  "location": {
+    "country": "PL",
+    "city": "Szczecin",
+    "address": "ul. Przykładowa 12/4",
+    "postalCode": "70-100",
+    "node": "nvidia"
   }
 }
 ```
 
 ---
 
-## 4. Quick Start (Python CLI & Library)
+## 4. Append-Only JSONL Event Stream & Cascading State (Audit Trail)
+
+Instead of rewriting the monolithic JSON state upon every update, `wellmanifest/metafile` supports an **append-only event log (JSONL)** directly in the file (e.g., incremental PDF trailer blocks):
+
+- Each update is written as an immutable `MetafileEvent` delta.
+- State evaluation behaves like **CSS cascading rules**: later event properties override earlier ones (`fold_events`).
+- Event schema: [`schemas/metafile.event.schema.json`](schemas/metafile.event.schema.json).
+
+```jsonl
+{"eventId":"01JB...","type":"created","timestamp":"2026-10-05T17:45:00Z","actor":"scanner-daemon","docId":"DOC-123","data":{"accounting":{"amount":"250.00","currency":"PLN","contractor":"BOTERM"}}}
+{"eventId":"01JB...","type":"classified","timestamp":"2026-10-05T18:10:00Z","actor":"tom","data":{"accounting":{"category":"koszty","subfolder":"koszty"}}}
+{"eventId":"01JB...","type":"approved","timestamp":"2026-10-05T18:30:00Z","actor":"ksiegowa","data":{"status":"approved"}}
+```
+
+---
+
+## 5. Quick Start (Python CLI & Library)
 
 ```bash
 # Install package
@@ -107,4 +130,11 @@ metafile read invoice.eml
 
 # Embed metadata directly into a file
 metafile write faktura.pdf --doc-id "DOC-123" --amount "250.00" --currency "PLN" --contractor "BOTERM"
+
+# Append a change event without rewriting existing data (audit log)
+metafile append faktura.pdf --event-type "classified" --actor "ksiegowosc" --payload '{"accounting":{"category":"koszty"}}'
+
+# Inspect complete revision history
+metafile history faktura.pdf --json
 ```
+
