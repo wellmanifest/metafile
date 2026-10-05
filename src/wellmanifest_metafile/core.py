@@ -66,6 +66,11 @@ class ProvenanceMeta:
     host: Optional[str] = None
     sourcePath: Optional[str] = None
     originalFilename: Optional[str] = None
+    lastEvent: Optional[str] = None
+    lastModifiedAt: Optional[str] = None
+    lastNode: Optional[str] = None
+    lastActor: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -220,6 +225,11 @@ class Metafile:
                 host=prov_raw.get("host"),
                 sourcePath=prov_raw.get("sourcePath") or data.get("originalPath"),
                 originalFilename=prov_raw.get("originalFilename") or data.get("fileName"),
+                lastEvent=prov_raw.get("lastEvent"),
+                lastModifiedAt=prov_raw.get("lastModifiedAt"),
+                lastNode=prov_raw.get("lastNode"),
+                lastActor=prov_raw.get("lastActor"),
+                extra=prov_raw.get("extra", {}),
             ),
             extra=data.get("extra", {}),
         )

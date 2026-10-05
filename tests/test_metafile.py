@@ -182,3 +182,64 @@ def test_dispatcher(tmp_path):
     assert res is not None
     assert res.docId == "DOC-AUTO-006"
     assert res.accounting.contractor == "DISPATCHER"
+
+
+def test_event_stream_and_folding(tmp_path):
+    from wellmanifest_metafile.events import MetafileEvent, fold_events, append_pdf_event, read_pdf_events
+
+    pdf_path = tmp_path / "stream_test.pdf"
+    pdf_bytes = (
+        b"%PDF-1.4\n"
+        b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n"
+        b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n"
+        b"3 0 obj << /Type /Page /Parent 2 0 R /MediaBox [0 0 100 100] >> endobj\n"
+        b"xref\n0 4\n0000000000 65535 f \n0000000010 00000 n \n0000000060 00000 n \n0000000117 00000 n \n"
+        b"trailer << /Size 4 /Root 1 0 R >>\n"
+        b"startxref\n185\n%%EOF\n"
+    )
+    pdf_path.write_bytes(pdf_bytes)
+
+    # 1. Event: scanned
+    ev1 = MetafileEvent(
+        event="scanned",
+        docId="DOC-STREAM-001",
+        node="android-bbf100",
+        delta={"type": "faktura", "date": "2026-09-07"}
+    )
+    assert append_pdf_event(pdf_path, ev1) is True
+
+    # 2. Event: ocr_extracted
+    ev2 = MetafileEvent(
+        event="ocr_extracted",
+        docId="DOC-STREAM-001",
+        actor="paddle-ocr",
+        delta={"accounting": {"amount": "250.00", "contractor": "BOTERM"}}
+    )
+    assert append_pdf_event(pdf_path, ev2) is True
+
+    # 3. Event: routed
+    ev3 = MetafileEvent(
+        event="routed",
+        docId="DOC-STREAM-001",
+        node="nvidia",
+        delta={"location": {"node": "lenovo", "city": "Szemud"}}
+    )
+    assert append_pdf_event(pdf_path, ev3) is True
+
+    # Read back events
+    history = read_pdf_events(pdf_path)
+    assert len(history) == 3
+    assert history[0].event == "scanned"
+    assert history[1].event == "ocr_extracted"
+    assert history[2].event == "routed"
+
+    # Reduce / Fold to current state
+    current = fold_events(history)
+    assert current is not None
+    assert current.docId == "DOC-STREAM-001"
+    assert current.type == "faktura"
+    assert current.date == "2026-09-07"
+    assert current.accounting.amount == "250.00"
+    assert current.accounting.contractor == "BOTERM"
+    assert current.location.city == "Szemud"
+    assert current.provenance.extra.get("lastEvent") == "routed" or current.to_dict()["provenance"].get("lastEvent") == "routed"

@@ -42,7 +42,62 @@ def main(argv: list[str] | None = None) -> int:
     p_check = subparsers.add_parser("check", help="Check MIME support and embedded metadata presence")
     p_check.add_argument("file", help="Path to file")
 
+    # Command: history
+    p_hist = subparsers.add_parser("history", help="Read embedded append-only event stream (JSONL)")
+    p_hist.add_argument("file", help="Path to file")
+
+    # Command: append
+    p_app = subparsers.add_parser("append", help="Append a discrete lifecycle event line (JSONL) to file")
+    p_app.add_argument("file", help="Path to file")
+    p_app.add_argument("--event", required=True, help="Event name (e.g. scanned, staged, routed, synced)")
+    p_app.add_argument("--doc-id", required=True, help="Canonical Document ID")
+    p_app.add_argument("--node", help="Cluster node identifier (e.g. lenovo, nvidia)")
+    p_app.add_argument("--actor", help="Actor or agent identifier")
+    p_app.add_argument("--delta", help="JSON string representing modified attributes")
+
     args = parser.parse_args(argv)
+
+    if args.command == "history":
+        from .events import read_pdf_events
+        path = Path(args.file)
+        if not path.is_file():
+            print(f"Error: file not found: {path}", file=sys.stderr)
+            return 1
+        events = read_pdf_events(path)
+        if not events:
+            print(f"No embedded event history found in {path}", file=sys.stderr)
+            return 2
+        for ev in events:
+            print(ev.to_jsonl())
+        return 0
+
+    elif args.command == "append":
+        from .events import append_pdf_event, MetafileEvent
+        path = Path(args.file)
+        if not path.is_file():
+            print(f"Error: file not found: {path}", file=sys.stderr)
+            return 1
+        delta = {}
+        if args.delta:
+            try:
+                delta = json.loads(args.delta)
+            except Exception as e:
+                print(f"Error parsing --delta JSON: {e}", file=sys.stderr)
+                return 1
+        event = MetafileEvent(
+            event=args.event,
+            docId=args.doc_id,
+            node=args.node,
+            actor=args.actor,
+            delta=delta,
+        )
+        ok = append_pdf_event(path, event)
+        if ok:
+            print(f"Successfully appended event '{args.event}' to {path}")
+            return 0
+        else:
+            print(f"Failed to append event to {path}", file=sys.stderr)
+            return 3
 
     if args.command == "read":
         path = Path(args.file)
