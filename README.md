@@ -21,7 +21,7 @@ Historically, accounting, document archival, and automation systems relied on **
 
 ---
 
-## 2. Supported MIME Types & Specifications
+## 2. Supported MIME Types & Specifications (Top 30 Formats)
 
 Specifications are organized into dedicated folders per MIME type under [`spec/mime-types/`](spec/mime-types/):
 
@@ -29,28 +29,35 @@ Specifications are organized into dedicated folders per MIME type under [`spec/m
 |---|---|---|---|---|
 | **Document** | `application/pdf` | `.pdf` | `/Info`, XMP `/Metadata`, `/EmbeddedFiles` | [PDF Spec](spec/mime-types/application/pdf/README.md) |
 | **Data** | `application/json` | `.json` | `$metafile` root property | [JSON Spec](spec/mime-types/application/json/README.md) |
-| **Markup** | `application/xml` | `.xml` | `<?wellmanifest-metafile?>` / `<wm:metafile>` | [XML Spec](spec/mime-types/application/xml/README.md) |
-| **Archive** | `application/zip` | `.zip` | `META-INF/metafile.json` / EOCD comment | [ZIP Spec](spec/mime-types/application/zip/README.md) |
+| **Data Stream** | `application/x-ndjson` | `.jsonl, .ndjson` | `# wellmanifest:` comment header / record | [JSONL Spec](spec/mime-types/application/x-ndjson/README.md) |
+| **Markup** | `application/xml` | `.xml` | `<metadata id="wellmanifest-metafile">` | [XML Spec](spec/mime-types/application/xml/README.md) |
+| **Tabular** | `text/csv` | `.csv` | Leading `# wellmanifest:` comment header | [CSV Spec](spec/mime-types/text/csv/README.md) |
+| **Tabular** | `text/tab-separated-values` | `.tsv` | Leading `# wellmanifest:` comment header | [TSV Spec](spec/mime-types/text/tab-separated-values/README.md) |
+| **Config/Data**| `application/yaml` | `.yaml, .yml` | `_metafile` root key / frontmatter | [YAML Spec](spec/mime-types/application/yaml/README.md) |
+| **Document** | `text/markdown` | `.md, .markdown` | YAML Frontmatter (`---`) | [Markdown Spec](spec/mime-types/text/markdown/README.md) |
+| **Text** | `text/plain` | `.txt` | Header / Trailing metadata block | [Plain Text Spec](spec/mime-types/text/plain/README.md) |
+| **Web Page** | `text/html` | `.html, .htm` | `<script type="application/ld+json" id="wellmanifest-metafile">` | [HTML Spec](spec/mime-types/text/html/README.md) |
+| **Email** | `message/rfc822` | `.eml, .msg` | RFC 5322 `X-Wellmanifest-*` headers | [EML Spec](spec/mime-types/message/rfc822/README.md) |
+| **Archive** | `application/zip` | `.zip` | `META-INF/metafile.json` / ZIP comment | [ZIP Spec](spec/mime-types/application/zip/README.md) |
 | **E-Book** | `application/epub+zip`| `.epub` | `META-INF/metafile.json` / OPF `<metadata>` | [EPUB Spec](spec/mime-types/application/epub+zip/README.md) |
-| **Office** | `application/vnd.openxmlformats` | `.docx, .xlsx, .pptx` | `docProps/custom.xml` | [OOXML Spec](spec/mime-types/application/vnd.openxmlformats/README.md) |
+| **Office Doc** | `application/vnd.openxmlformats` | `.docx` | `META-INF/metafile.json` in OOXML package | [OOXML Spec](spec/mime-types/application/vnd.openxmlformats/README.md) |
+| **Office Sheet**| `application/vnd.openxmlformats` | `.xlsx` | `META-INF/metafile.json` in OOXML package | [OOXML Spec](spec/mime-types/application/vnd.openxmlformats/README.md) |
 | **Raster Image** | `image/png` | `.png` | `iTXt` chunk (`wellmanifest:metafile`) | [PNG Spec](spec/mime-types/image/png/README.md) |
 | **Raster Image** | `image/jpeg` | `.jpg, .jpeg` | APP1 (XMP packet) / EXIF Tag 0x9286 | [JPEG Spec](spec/mime-types/image/jpeg/README.md) |
 | **Web Image** | `image/webp` | `.webp` | RIFF `'XMP '` / `'EXIF'` chunk | [WebP Spec](spec/mime-types/image/webp/README.md) |
 | **Vector Image** | `image/svg+xml` | `.svg` | `<metadata id="wellmanifest-metafile">` | [SVG Spec](spec/mime-types/image/svg+xml/README.md) |
-| **Print Image** | `image/tiff` | `.tiff, .tif` | TIFF Tag 700 (XMP) / Tag 37510 | [TIFF Spec](spec/mime-types/image/tiff/README.md) |
-| **Modern Image**| `image/avif` | `.avif, .heic`| ISOBMFF `meta` item (`mime`) | [AVIF Spec](spec/mime-types/image/avif/README.md) |
-| **Animation** | `image/gif` | `.gif` | Application Extension block `XMP Data` | [GIF Spec](spec/mime-types/image/gif/README.md) |
-| **Email** | `message/rfc822` | `.eml, .msg` | RFC 5322 `X-Wellmanifest-*` headers | [EML Spec](spec/mime-types/message/rfc822/README.md) |
-| **Text** | `text/plain` | `.txt` | Header / Trailing block | [Plain Text Spec](spec/mime-types/text/plain/README.md) |
-| **Document** | `text/markdown` | `.md` | YAML Frontmatter (`---`) | [Markdown Spec](spec/mime-types/text/markdown/README.md) |
-| **Tabular** | `text/csv` | `.csv` | Leading `# wellmanifest:metafile:v1` comment | [CSV Spec](spec/mime-types/text/csv/README.md) |
-| **Web Page** | `text/html` | `.html` | `<script type="application/ld+json" id="wellmanifest-metafile">` | [HTML Spec](spec/mime-types/text/html/README.md) |
+| **Animation** | `image/gif` | `.gif` | Application Extension block `comment` / XMP | [GIF Spec](spec/mime-types/image/gif/README.md) |
+| **Print Image** | `image/tiff` | `.tiff, .tif` | TIFF Tag 700 (XMP) / Tag 37510 (UserComment) | [TIFF Spec](spec/mime-types/image/tiff/README.md) |
+| **Bitmap** | `image/bmp` | `.bmp` | Non-destructive trailer block | [BMP Spec](spec/mime-types/image/bmp/README.md) |
+| **Icon** | `image/x-icon` | `.ico` | Non-destructive trailer block | [ICO Spec](spec/mime-types/image/x-icon/README.md) |
+| **Modern Image**| `image/avif` | `.avif, .heic`| ISOBMFF `meta` item (`mime`) / trailer | [AVIF Spec](spec/mime-types/image/avif/README.md) |
 | **Audio** | `audio/mpeg` | `.mp3` | ID3v2.4 `TXXX:WELLMANIFEST_METAFILE` | [MP3 Spec](spec/mime-types/audio/mpeg/README.md) |
 | **Audio** | `audio/flac` | `.flac` | Vorbis Comment `WELLMANIFEST_METAFILE` | [FLAC Spec](spec/mime-types/audio/flac/README.md) |
+| **Audio** | `audio/ogg` | `.ogg, .oga` | Vorbis Comment `WELLMANIFEST_METAFILE` | [OGG Spec](spec/mime-types/audio/ogg/README.md) |
 | **Audio** | `audio/wav` | `.wav` | RIFF `'id3 '` / `'INFO'` sub-chunks | [WAV Spec](spec/mime-types/audio/wav/README.md) |
-| **Audio** | `audio/mp4` | `.m4a, .aac` | QuickTime atom `moov.udta.meta.ilst` | [M4A Spec](spec/mime-types/audio/mp4/README.md) |
-| **Video** | `video/mp4` | `.mp4` | ISOBMFF `moov.udta.WMET` atom | [MP4 Spec](spec/mime-types/video/mp4/README.md) |
-| **Video** | `video/x-matroska` | `.mkv, .webm` | EBML `Tags` element / Attachment | [Matroska Spec](spec/mime-types/video/x-matroska/README.md) |
+| **Audio / Video**| `audio/mp4`, `video/mp4` | `.m4a, .mp4` | QuickTime atom `----:com.apple.iTunes:WELLMANIFEST_METAFILE` | [MP4 Spec](spec/mime-types/video/mp4/README.md) |
+| **Video** | `video/x-matroska` | `.mkv` | EBML `Tags` element / trailer | [Matroska Spec](spec/mime-types/video/x-matroska/README.md) |
+| **Video** | `video/webm` | `.webm` | EBML `Tags` element / trailer | [WebM Spec](spec/mime-types/video/webm/README.md) |
 
 ---
 
@@ -137,4 +144,47 @@ metafile append faktura.pdf --event-type "classified" --actor "ksiegowosc" --pay
 # Inspect complete revision history
 metafile history faktura.pdf --json
 ```
+
+---
+
+## 6. Programmatic Python API
+
+```python
+from wellmanifest_metafile import Metafile, AccountingMeta, LocationMeta, read_metafile, write_metafile
+
+# 1. Read metadata from any of the 30 supported formats
+meta = read_metafile("faktura.pdf")
+print(f"DocID: {meta.docId}, Amount: {meta.accounting.amount} {meta.accounting.currency}")
+print(f"Location: {meta.location.city}, {meta.location.country}")
+
+# 2. Write metadata into any file
+meta_obj = Metafile(
+    docId="DOC-2026-001",
+    accounting=AccountingMeta(amount="499.00", currency="PLN", contractor="ACME CORP"),
+    location=LocationMeta(country="PL", city="Warszawa", postalCode="00-001"),
+)
+write_metafile("scanned_receipt.png", meta_obj)
+write_metafile("audio_note.mp3", meta_obj)
+```
+
+---
+
+## 7. Automated Test Suite (30 Formats)
+
+The specification and reference adapters are verified through automated end-to-end test suites:
+
+```bash
+# Run 30-format battery test suite
+pytest tests/test_30_formats.py -v
+
+# Run full project test suite
+pytest tests/ -v
+```
+
+All 30 formats are tested for:
+1. Valid binary/text file generation and integrity.
+2. Lossless metadata embedding (`write_metafile`).
+3. Lossless metadata extraction (`read_metafile`).
+4. Financial and geographical field preservation (`accounting`, `location`).
+
 
