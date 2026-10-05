@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "wellmanifest-metafile"
+version = "0.1.0"
+description = "Universal Standard for Self-Contained Embedded Document Metadata across MIME types"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Wellmanifest Authors" }]
+dependencies = [
+    "jsonschema>=4.0.0",
+    "pillow>=9.0.0",
+    "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest>=7.0.0",
+]
+
+[project.scripts]
+metafile = "wellmanifest_metafile.cli:main"
