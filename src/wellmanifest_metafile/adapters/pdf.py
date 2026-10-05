@@ -18,6 +18,8 @@ def read_pdf_metafile(file_path: Path | str) -> Optional[Metafile]:
 
     raw_bytes = path.read_bytes()
 
+    meta = None
+
     # 1. Search for embedded JSON string marker (taking latest incremental update)
     # Format: /WellmanifestJSON (base64_or_json) or stream with marker
     matches = list(re.finditer(rb"/WellmanifestJSON\s*\((.*?)\)", raw_bytes, re.DOTALL))
@@ -25,46 +27,58 @@ def read_pdf_metafile(file_path: Path | str) -> Optional[Metafile]:
         val = matches[-1].group(1).decode("latin1", errors="ignore")
         val = val.replace("\\(", "(").replace("\\)", ")").replace("\\\\", "\\")
         try:
-            return Metafile.from_json(val)
+            meta = Metafile.from_json(val)
         except Exception:
             pass
 
     # 2. Search for raw JSON payload within any metadata stream
-    json_block = re.search(rb'\{\s*"schema":\s*"wellmanifest\.metafile/v1".*?\}', raw_bytes, re.DOTALL)
-    if json_block:
-        try:
-            return Metafile.from_json(json_block.group(0).decode("utf-8"))
-        except Exception:
-            pass
+    if meta is None:
+        json_block = re.search(rb'\{\s*"schema":\s*"wellmanifest\.metafile/v1".*?\}', raw_bytes, re.DOTALL)
+        if json_block:
+            try:
+                meta = Metafile.from_json(json_block.group(0).decode("utf-8"))
+            except Exception:
+                pass
 
     # 3. Extract standard Info dictionary fields
-    doc_id_m = re.search(rb"/DocId\s*\((.*?)\)", raw_bytes)
-    contractor_m = re.search(rb"/Contractor\s*\((.*?)\)", raw_bytes)
-    amount_m = re.search(rb"/Amount\s*\((.*?)\)", raw_bytes)
-    currency_m = re.search(rb"/Currency\s*\((.*?)\)", raw_bytes)
-    date_m = re.search(rb"/Date\s*\((.*?)\)", raw_bytes)
-    type_m = re.search(rb"/Type\s*\((.*?)\)", raw_bytes)
-    country_m = re.search(rb"/Country\s*\((.*?)\)", raw_bytes)
-    city_m = re.search(rb"/City\s*\((.*?)\)", raw_bytes)
-    address_m = re.search(rb"/Address\s*\((.*?)\)", raw_bytes)
-    node_m = re.search(rb"/Node\s*\((.*?)\)", raw_bytes)
+    if meta is None:
+        doc_id_m = re.search(rb"/DocId\s*\((.*?)\)", raw_bytes)
+        contractor_m = re.search(rb"/Contractor\s*\((.*?)\)", raw_bytes)
+        amount_m = re.search(rb"/Amount\s*\((.*?)\)", raw_bytes)
+        currency_m = re.search(rb"/Currency\s*\((.*?)\)", raw_bytes)
+        date_m = re.search(rb"/Date\s*\((.*?)\)", raw_bytes)
+        type_m = re.search(rb"/Type\s*\((.*?)\)", raw_bytes)
+        country_m = re.search(rb"/Country\s*\((.*?)\)", raw_bytes)
+        city_m = re.search(rb"/City\s*\((.*?)\)", raw_bytes)
+        address_m = re.search(rb"/Address\s*\((.*?)\)", raw_bytes)
+        node_m = re.search(rb"/Node\s*\((.*?)\)", raw_bytes)
 
-    if doc_id_m:
-        data = {
-            "docId": doc_id_m.group(1).decode("latin1", errors="ignore"),
-            "contractor": contractor_m.group(1).decode("latin1", errors="ignore") if contractor_m else None,
-            "amount": amount_m.group(1).decode("latin1", errors="ignore") if amount_m else None,
-            "currency": currency_m.group(1).decode("latin1", errors="ignore") if currency_m else "PLN",
-            "date": date_m.group(1).decode("latin1", errors="ignore") if date_m else None,
-            "type": type_m.group(1).decode("latin1", errors="ignore") if type_m else None,
-            "location": {
-                "country": country_m.group(1).decode("latin1", errors="ignore") if country_m else None,
-                "city": city_m.group(1).decode("latin1", errors="ignore") if city_m else None,
-                "address": address_m.group(1).decode("latin1", errors="ignore") if address_m else None,
-                "node": node_m.group(1).decode("latin1", errors="ignore") if node_m else None,
+        if doc_id_m:
+            data = {
+                "docId": doc_id_m.group(1).decode("latin1", errors="ignore"),
+                "contractor": contractor_m.group(1).decode("latin1", errors="ignore") if contractor_m else None,
+                "amount": amount_m.group(1).decode("latin1", errors="ignore") if amount_m else None,
+                "currency": currency_m.group(1).decode("latin1", errors="ignore") if currency_m else "PLN",
+                "date": date_m.group(1).decode("latin1", errors="ignore") if date_m else None,
+                "type": type_m.group(1).decode("latin1", errors="ignore") if type_m else None,
+                "location": {
+                    "country": country_m.group(1).decode("latin1", errors="ignore") if country_m else None,
+                    "city": city_m.group(1).decode("latin1", errors="ignore") if city_m else None,
+                    "address": address_m.group(1).decode("latin1", errors="ignore") if address_m else None,
+                    "node": node_m.group(1).decode("latin1", errors="ignore") if node_m else None,
+                }
             }
-        }
-        return Metafile.from_dict(data)
+            meta = Metafile.from_dict(data)
+
+    if meta is not None:
+        try:
+            from ..events import read_pdf_events, fold_events
+            events = read_pdf_events(path)
+            if events:
+                meta = fold_events(events, base=meta)
+        except Exception:
+            pass
+        return meta
 
     return None
 
