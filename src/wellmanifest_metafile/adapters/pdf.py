@@ -18,11 +18,11 @@ def read_pdf_metafile(file_path: Path | str) -> Optional[Metafile]:
 
     raw_bytes = path.read_bytes()
 
-    # 1. Search for embedded JSON string marker
+    # 1. Search for embedded JSON string marker (taking latest incremental update)
     # Format: /WellmanifestJSON (base64_or_json) or stream with marker
-    marker_m = re.search(rb"/WellmanifestJSON\s*\((.*?)\)", raw_bytes, re.DOTALL)
-    if marker_m:
-        val = marker_m.group(1).decode("latin1", errors="ignore")
+    matches = list(re.finditer(rb"/WellmanifestJSON\s*\((.*?)\)", raw_bytes, re.DOTALL))
+    if matches:
+        val = matches[-1].group(1).decode("latin1", errors="ignore")
         val = val.replace("\\(", "(").replace("\\)", ")").replace("\\\\", "\\")
         try:
             return Metafile.from_json(val)
@@ -41,16 +41,28 @@ def read_pdf_metafile(file_path: Path | str) -> Optional[Metafile]:
     doc_id_m = re.search(rb"/DocId\s*\((.*?)\)", raw_bytes)
     contractor_m = re.search(rb"/Contractor\s*\((.*?)\)", raw_bytes)
     amount_m = re.search(rb"/Amount\s*\((.*?)\)", raw_bytes)
+    currency_m = re.search(rb"/Currency\s*\((.*?)\)", raw_bytes)
     date_m = re.search(rb"/Date\s*\((.*?)\)", raw_bytes)
     type_m = re.search(rb"/Type\s*\((.*?)\)", raw_bytes)
+    country_m = re.search(rb"/Country\s*\((.*?)\)", raw_bytes)
+    city_m = re.search(rb"/City\s*\((.*?)\)", raw_bytes)
+    address_m = re.search(rb"/Address\s*\((.*?)\)", raw_bytes)
+    node_m = re.search(rb"/Node\s*\((.*?)\)", raw_bytes)
 
     if doc_id_m:
         data = {
             "docId": doc_id_m.group(1).decode("latin1", errors="ignore"),
             "contractor": contractor_m.group(1).decode("latin1", errors="ignore") if contractor_m else None,
             "amount": amount_m.group(1).decode("latin1", errors="ignore") if amount_m else None,
+            "currency": currency_m.group(1).decode("latin1", errors="ignore") if currency_m else "PLN",
             "date": date_m.group(1).decode("latin1", errors="ignore") if date_m else None,
             "type": type_m.group(1).decode("latin1", errors="ignore") if type_m else None,
+            "location": {
+                "country": country_m.group(1).decode("latin1", errors="ignore") if country_m else None,
+                "city": city_m.group(1).decode("latin1", errors="ignore") if city_m else None,
+                "address": address_m.group(1).decode("latin1", errors="ignore") if address_m else None,
+                "node": node_m.group(1).decode("latin1", errors="ignore") if node_m else None,
+            }
         }
         return Metafile.from_dict(data)
 
@@ -90,8 +102,16 @@ def write_pdf_metafile(file_path: Path | str, meta: Metafile) -> bool:
         fields.append(f"/Contractor ({escape_pdf(meta.accounting.contractor)})")
     if meta.accounting.amount:
         fields.append(f"/Amount ({escape_pdf(str(meta.accounting.amount))})")
-    if meta.accounting.currency:
-        fields.append(f"/Currency ({escape_pdf(meta.accounting.currency)})")
+    if meta.currency:
+        fields.append(f"/Currency ({escape_pdf(meta.currency)})")
+    if meta.location.country:
+        fields.append(f"/Country ({escape_pdf(meta.location.country)})")
+    if meta.location.city:
+        fields.append(f"/City ({escape_pdf(meta.location.city)})")
+    if meta.location.address:
+        fields.append(f"/Address ({escape_pdf(meta.location.address)})")
+    if meta.location.node:
+        fields.append(f"/Node ({escape_pdf(meta.location.node)})")
     if meta.date:
         fields.append(f"/Date ({escape_pdf(meta.date)})")
 

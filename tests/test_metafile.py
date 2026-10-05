@@ -21,22 +21,35 @@ def test_metafile_serialization():
         docId="DOC-TEST-1234",
         type="faktura",
         date="2026-09-07",
+        currency="PLN",
     )
     meta.accounting.amount = "250.00"
     meta.accounting.contractor = "BOTERM"
     meta.accounting.currency = "PLN"
+    meta.location.country = "PL"
+    meta.location.city = "Szemud"
+    meta.location.address = "ul. Wejherowska 11"
+    meta.location.node = "lenovo"
     meta.ocr.text = "FAKTURA VAT"
 
     d = meta.to_dict()
     assert d["docId"] == "DOC-TEST-1234"
     assert d["schema"] == "wellmanifest.metafile/v1"
+    assert d["currency"] == "PLN"
     assert d["accounting"]["amount"] == "250.00"
     assert d["accounting"]["contractor"] == "BOTERM"
+    assert d["location"]["city"] == "Szemud"
+    assert d["location"]["country"] == "PL"
+    assert d["location"]["node"] == "lenovo"
 
     recovered = Metafile.from_dict(d)
     assert recovered.docId == "DOC-TEST-1234"
+    assert recovered.currency == "PLN"
     assert recovered.accounting.amount == "250.00"
     assert recovered.accounting.contractor == "BOTERM"
+    assert recovered.location.city == "Szemud"
+    assert recovered.location.country == "PL"
+    assert recovered.location.node == "lenovo"
 
 
 def test_png_embedding(tmp_path):

@@ -1,0 +1,2 @@
+[console_scripts]
+metafile = wellmanifest_metafile.cli:main

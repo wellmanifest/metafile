@@ -47,6 +47,12 @@ def read_eml_metafile(file_path: Path | str) -> Optional[Metafile]:
                 "contractor": msg.get("X-Wellmanifest-Contractor") or msg.get("X-Document-Contractor"),
                 "amount": msg.get("X-Wellmanifest-Amount") or msg.get("X-Document-Amount"),
                 "currency": msg.get("X-Wellmanifest-Currency") or msg.get("X-Document-Currency") or "PLN",
+                "location": {
+                    "country": msg.get("X-Wellmanifest-Country"),
+                    "city": msg.get("X-Wellmanifest-City"),
+                    "address": msg.get("X-Wellmanifest-Address"),
+                    "node": msg.get("X-Wellmanifest-Node"),
+                }
             }
             return Metafile.from_dict(data)
     except Exception:
@@ -68,6 +74,7 @@ def write_eml_metafile(file_path: Path | str, meta: Metafile) -> bool:
         headers_to_remove = [
             "X-Wellmanifest-DocID", "X-Wellmanifest-Type", "X-Wellmanifest-Date",
             "X-Wellmanifest-Contractor", "X-Wellmanifest-Amount", "X-Wellmanifest-Currency",
+            "X-Wellmanifest-Country", "X-Wellmanifest-City", "X-Wellmanifest-Address", "X-Wellmanifest-Node",
             "X-Wellmanifest-Payload-B64"
         ]
         for h in headers_to_remove:
@@ -84,8 +91,16 @@ def write_eml_metafile(file_path: Path | str, meta: Metafile) -> bool:
             msg["X-Wellmanifest-Contractor"] = meta.accounting.contractor
         if meta.accounting.amount:
             msg["X-Wellmanifest-Amount"] = str(meta.accounting.amount)
-        if meta.accounting.currency:
-            msg["X-Wellmanifest-Currency"] = meta.accounting.currency
+        if meta.currency:
+            msg["X-Wellmanifest-Currency"] = meta.currency
+        if meta.location.country:
+            msg["X-Wellmanifest-Country"] = meta.location.country
+        if meta.location.city:
+            msg["X-Wellmanifest-City"] = meta.location.city
+        if meta.location.address:
+            msg["X-Wellmanifest-Address"] = meta.location.address
+        if meta.location.node:
+            msg["X-Wellmanifest-Node"] = meta.location.node
 
         b64_json = base64.b64encode(meta.to_json(indent=0).encode("utf-8")).decode("ascii")
         msg["X-Wellmanifest-Payload-B64"] = b64_json

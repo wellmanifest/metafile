@@ -29,9 +29,13 @@ def main(argv: list[str] | None = None) -> int:
     p_write.add_argument("--type", help="Document type (e.g. faktura, paragon, contract)")
     p_write.add_argument("--date", help="Document date (YYYY-MM-DD)")
     p_write.add_argument("--amount", help="Financial amount")
-    p_write.add_argument("--currency", default="PLN", help="Currency code (e.g. PLN, EUR)")
+    p_write.add_argument("--currency", default="PLN", help="Currency code (e.g. PLN, EUR, USD)")
     p_write.add_argument("--contractor", help="Contractor / Vendor name")
     p_write.add_argument("--contractor-nip", help="Contractor Tax ID / NIP")
+    p_write.add_argument("--country", default="PL", help="ISO country code (e.g. PL, DE, US)")
+    p_write.add_argument("--city", help="City name (e.g. Szemud, Wejherowo, Gdansk)")
+    p_write.add_argument("--address", help="Physical address")
+    p_write.add_argument("--node", help="Distributed node name (e.g. lenovo, nvidia)")
     p_write.add_argument("--json-data", help="Raw JSON string with complete metadata payload")
 
     # Command: check
@@ -68,6 +72,7 @@ def main(argv: list[str] | None = None) -> int:
                 docId=args.doc_id,
                 type=args.type,
                 date=args.date,
+                currency=args.currency or "PLN",
             )
             if args.amount:
                 meta.accounting.amount = args.amount
@@ -77,6 +82,14 @@ def main(argv: list[str] | None = None) -> int:
                 meta.accounting.contractor = args.contractor
             if args.contractor_nip:
                 meta.accounting.contractorNip = args.contractor_nip
+            if args.country:
+                meta.location.country = args.country
+            if args.city:
+                meta.location.city = args.city
+            if args.address:
+                meta.location.address = args.address
+            if args.node:
+                meta.location.node = args.node
 
         ok = write_metafile(path, meta)
         if ok:

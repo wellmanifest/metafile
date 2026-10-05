@@ -10,6 +10,10 @@ from typing import Any, Dict, Optional
 class AccountingMeta:
     amount: Optional[str] = None
     currency: str = "PLN"
+    exchangeRate: Optional[float] = None
+    netAmount: Optional[str] = None
+    vatAmount: Optional[str] = None
+    grossAmount: Optional[str] = None
     contractor: Optional[str] = None
     contractorNip: Optional[str] = None
     buyer: Optional[str] = None
@@ -19,6 +23,20 @@ class AccountingMeta:
     category: Optional[str] = "koszty"
     subfolder: Optional[str] = "koszty"
     invoiceNumber: Optional[str] = None
+    extra: Dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class LocationMeta:
+    country: Optional[str] = None
+    city: Optional[str] = None
+    address: Optional[str] = None
+    postalCode: Optional[str] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
+    placeName: Optional[str] = None
+    node: Optional[str] = None
+    storagePath: Optional[str] = None
     extra: Dict[str, Any] = field(default_factory=dict)
 
 
@@ -57,8 +75,10 @@ class Metafile:
     urn: Optional[str] = None
     type: Optional[str] = None
     date: Optional[str] = None
+    currency: str = "PLN"
     title: Optional[str] = None
     description: Optional[str] = None
+    location: LocationMeta = field(default_factory=LocationMeta)
     accounting: AccountingMeta = field(default_factory=AccountingMeta)
     hashes: HashesMeta = field(default_factory=HashesMeta)
     ocr: OcrMeta = field(default_factory=OcrMeta)
@@ -123,17 +143,51 @@ class Metafile:
                 "text": str(data.get("text") or data.get("ocrText") or ""),
             }
 
+        loc_raw = data.get("location") or {}
+        if not loc_raw:
+            if any(k in data for k in ("country", "city", "address", "node", "storagePath", "postalCode")):
+                loc_raw = {
+                    "country": data.get("country"),
+                    "city": data.get("city"),
+                    "address": data.get("address"),
+                    "postalCode": data.get("postalCode"),
+                    "latitude": data.get("latitude"),
+                    "longitude": data.get("longitude"),
+                    "placeName": data.get("placeName"),
+                    "node": data.get("node"),
+                    "storagePath": data.get("storagePath"),
+                }
+
+        effective_currency = data.get("currency") or acc_raw.get("currency") or "PLN"
+
         return cls(
             docId=str(doc_id),
             schema=str(data.get("schema", "wellmanifest.metafile/v1")),
             urn=data.get("urn") or data.get("uri"),
             type=data.get("type"),
             date=data.get("date"),
+            currency=effective_currency,
             title=data.get("title"),
             description=data.get("description"),
+            location=LocationMeta(
+                country=loc_raw.get("country"),
+                city=loc_raw.get("city"),
+                address=loc_raw.get("address"),
+                postalCode=loc_raw.get("postalCode"),
+                latitude=float(loc_raw["latitude"]) if loc_raw.get("latitude") is not None else None,
+                longitude=float(loc_raw["longitude"]) if loc_raw.get("longitude") is not None else None,
+                placeName=loc_raw.get("placeName"),
+                node=loc_raw.get("node"),
+                storagePath=loc_raw.get("storagePath"),
+                extra=loc_raw.get("extra", {}),
+            ),
             accounting=AccountingMeta(
                 amount=acc_raw.get("amount"),
-                currency=acc_raw.get("currency", "PLN"),
+                currency=effective_currency,
+                exchangeRate=float(acc_raw["exchangeRate"]) if acc_raw.get("exchangeRate") is not None else None,
+                netAmount=acc_raw.get("netAmount"),
+                vatAmount=acc_raw.get("vatAmount"),
+                grossAmount=acc_raw.get("grossAmount"),
                 contractor=acc_raw.get("contractor"),
                 contractorNip=acc_raw.get("contractorNip"),
                 buyer=acc_raw.get("buyer"),
