@@ -47,6 +47,8 @@ def assert_meta_matches(meta: Metafile, fmt_name: str):
     assert meta.location is not None
     assert meta.location.city == "Warszawa"
     assert meta.location.country == "PL"
+    is_valid, errs = meta.validate()
+    assert is_valid, f"Schema validation error in {fmt_name}: {errs}"
 
 
 # ==============================================================================
@@ -183,6 +185,8 @@ def test_format_zip(tmp_path: Path):
     write_metafile(path, meta)
     read_meta = read_metafile(path)
     assert_meta_matches(read_meta, "zip")
+    with zipfile.ZipFile(path, "r") as zf:
+        assert zf.read("test.txt") == b"Inside archive"
 
 
 def test_format_docx(tmp_path: Path):
@@ -194,6 +198,8 @@ def test_format_docx(tmp_path: Path):
     write_metafile(path, meta)
     read_meta = read_metafile(path)
     assert_meta_matches(read_meta, "docx")
+    with zipfile.ZipFile(path, "r") as zf:
+        assert zf.read("word/document.xml") == b"<w:document/>"
 
 
 def test_format_xlsx(tmp_path: Path):
@@ -205,6 +211,8 @@ def test_format_xlsx(tmp_path: Path):
     write_metafile(path, meta)
     read_meta = read_metafile(path)
     assert_meta_matches(read_meta, "xlsx")
+    with zipfile.ZipFile(path, "r") as zf:
+        assert zf.read("xl/workbook.xml") == b"<workbook/>"
 
 
 # ==============================================================================
@@ -219,6 +227,8 @@ def test_format_png(tmp_path: Path):
     write_metafile(path, meta)
     read_meta = read_metafile(path)
     assert_meta_matches(read_meta, "png")
+    with Image.open(path) as img:
+        assert img.size == (10, 10)
 
 
 def test_format_jpeg(tmp_path: Path):
@@ -229,6 +239,8 @@ def test_format_jpeg(tmp_path: Path):
     write_metafile(path, meta)
     read_meta = read_metafile(path)
     assert_meta_matches(read_meta, "jpeg")
+    with Image.open(path) as img:
+        assert img.size == (10, 10)
 
 
 def test_format_webp(tmp_path: Path):

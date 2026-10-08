@@ -120,7 +120,16 @@ def read_metafile(file_path: Path | str) -> Optional[Metafile]:
     ext = path.suffix.lower()
     if ext in ADAPTER_MAP:
         reader = ADAPTER_MAP[ext][0]
-        return reader(path)
+        meta = reader(path)
+        if meta is not None and ext != ".pdf":
+            try:
+                from .events import read_events, fold_events
+                events = read_events(path)
+                if events:
+                    meta = fold_events(events, base=meta)
+            except Exception:
+                pass
+        return meta
 
     return None
 

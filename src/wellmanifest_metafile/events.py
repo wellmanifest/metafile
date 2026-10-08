@@ -6,7 +6,7 @@ import re
 import time
 from dataclasses import dataclass, field, asdict
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from .core import Metafile
 
@@ -28,6 +28,11 @@ class MetafileEvent:
 
     def to_jsonl(self) -> str:
         return json.dumps(self.to_dict(), ensure_ascii=False)
+
+    def validate(self) -> Tuple[bool, List[str]]:
+        """Validate this event against schemas/metafile.event.schema.json."""
+        from .validator import validate_event
+        return validate_event(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> MetafileEvent:
@@ -80,6 +85,77 @@ def fold_events(events: List[MetafileEvent], base: Optional[Metafile] = None) ->
     return Metafile.from_dict(accumulated)
 
 
+def read_events(file_path: Path | str) -> List[MetafileEvent]:
+    """Read all append-only event lines embedded in any supported file."""
+    path = Path(file_path).expanduser().resolve()
+    if not path.is_file():
+        return []
+
+    try:
+        with open(path, "rb") as f:
+            magic = f.read(5)
+        if magic.startswith(b"%PDF-"):
+            return read_pdf_events(path)
+    except Exception:
+        return []
+
+    # For text, jsonl, csv, markdown, html, and other files
+    events: List[MetafileEvent] = []
+    try:
+        raw = path.read_bytes()
+        # 1. Match `# wellmanifest-event: <jsonl>`
+        for m in re.finditer(rb"#\s*wellmanifest-event:\s*([^\r\n]+)", raw):
+            try:
+                events.append(MetafileEvent.from_json(m.group(1).decode("utf-8").strip()))
+            except Exception:
+                pass
+        # 2. Match `<!-- wellmanifest-event: <jsonl> -->`
+        for m in re.finditer(rb"<!--\s*wellmanifest-event:\s*(.*?)\s*-->", raw, re.DOTALL):
+            try:
+                events.append(MetafileEvent.from_json(m.group(1).decode("utf-8").strip()))
+            except Exception:
+                pass
+        # 3. Match `% --- Wellmanifest JSONL Event ---\s*<jsonl>`
+        for m in re.finditer(rb"% --- Wellmanifest JSONL Event ---\s*([^\r\n]+)", raw):
+            try:
+                events.append(MetafileEvent.from_json(m.group(1).decode("utf-8").strip()))
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return events
+
+
+def append_event(file_path: Path | str, event: MetafileEvent) -> bool:
+    """Append a discrete lifecycle event directly to a file without destroying existing content."""
+    path = Path(file_path).expanduser().resolve()
+    if not path.is_file():
+        return False
+
+    try:
+        with open(path, "rb") as f:
+            magic = f.read(5)
+        if magic.startswith(b"%PDF-"):
+            return append_pdf_event(path, event)
+    except Exception:
+        return False
+
+    ext = path.suffix.lower()
+    jsonl_line = event.to_jsonl()
+
+    try:
+        if ext in (".html", ".htm"):
+            line = f"\n<!-- wellmanifest-event: {jsonl_line} -->\n".encode("utf-8")
+        else:
+            line = f"\n# wellmanifest-event: {jsonl_line}\n".encode("utf-8")
+
+        with open(path, "ab") as f:
+            f.write(line)
+        return True
+    except Exception:
+        return False
+
+
 def read_pdf_events(file_path: Path | str) -> List[MetafileEvent]:
     """Read all append-only event lines embedded in a PDF file."""
     path = Path(file_path).expanduser().resolve()
@@ -88,22 +164,23 @@ def read_pdf_events(file_path: Path | str) -> List[MetafileEvent]:
 
     raw = path.read_bytes()
     events: List[MetafileEvent] = []
+    # 1. Search for all /WellmanifestEvent (...) objects
+    matches = list(re.finditer(rb"/WellmanifestEvent\s*\((.*?)\)", raw, re.DOTALL))
+    if matches:
+        for m in matches:
+            val = m.group(1).decode("latin1", errors="ignore")
+            val = val.replace("\\(", "(").replace("\\)", ")").replace("\\\\", "\\")
+            try:
+                events.append(MetafileEvent.from_json(val))
+            except Exception:
+                pass
+        return events
 
-    # Search for all /WellmanifestEvent (...) objects
-    matches = re.finditer(rb"/WellmanifestEvent\s*\((.*?)\)", raw, re.DOTALL)
-    for m in matches:
-        val = m.group(1).decode("latin1", errors="ignore")
-        val = val.replace("\\(", "(").replace("\\)", ")").replace("\\\\", "\\")
-        try:
-            events.append(MetafileEvent.from_json(val))
-        except Exception:
-            pass
-
-    # Also search for embedded JSONL streams
-    stream_matches = re.finditer(rb"% --- Wellmanifest JSONL Event ---\s*(\{.*?\})", raw)
+    # 2. Also search for embedded JSONL streams
+    stream_matches = re.finditer(rb"% --- Wellmanifest JSONL Event ---\s*([^\r\n]+)", raw)
     for sm in stream_matches:
         try:
-            events.append(MetafileEvent.from_json(sm.group(1).decode("utf-8")))
+            events.append(MetafileEvent.from_json(sm.group(1).decode("utf-8").strip()))
         except Exception:
             pass
 
@@ -143,3 +220,4 @@ def append_pdf_event(file_path: Path | str, event: MetafileEvent) -> bool:
 
     path.write_bytes(raw[:eof_pos] + update)
     return True
+

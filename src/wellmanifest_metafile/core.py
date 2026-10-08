@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass, field, asdict
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 
 @dataclass
@@ -107,6 +107,11 @@ class Metafile:
     def to_json(self, indent: int = 2) -> str:
         """Serialize metafile to formatted JSON string."""
         return json.dumps(self.to_dict(), indent=indent, ensure_ascii=False)
+
+    def validate(self) -> Tuple[bool, List[str]]:
+        """Validate this metafile against schemas/metafile.v1.schema.json."""
+        from .validator import validate_metafile
+        return validate_metafile(self)
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> Metafile:

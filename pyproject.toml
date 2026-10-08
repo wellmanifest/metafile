@@ -23,3 +23,6 @@ test = [
 
 [project.scripts]
 metafile = "wellmanifest_metafile.cli:main"
+
+[tool.setuptools.package-data]
+"wellmanifest_metafile" = ["schemas/*.json"]

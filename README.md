@@ -143,6 +143,9 @@ metafile append faktura.pdf --event-type "classified" --actor "ksiegowosc" --pay
 
 # Inspect complete revision history
 metafile history faktura.pdf --json
+
+# Validate embedded metadata and event history against official schemas
+metafile validate faktura.pdf
 ```
 
 ---
@@ -150,7 +153,15 @@ metafile history faktura.pdf --json
 ## 6. Programmatic Python API
 
 ```python
-from wellmanifest_metafile import Metafile, AccountingMeta, LocationMeta, read_metafile, write_metafile
+from wellmanifest_metafile import (
+    Metafile,
+    AccountingMeta,
+    LocationMeta,
+    read_metafile,
+    write_metafile,
+    validate_metafile,
+    validate_file,
+)
 
 # 1. Read metadata from any of the 30 supported formats
 meta = read_metafile("faktura.pdf")
@@ -165,6 +176,14 @@ meta_obj = Metafile(
 )
 write_metafile("scanned_receipt.png", meta_obj)
 write_metafile("audio_note.mp3", meta_obj)
+
+# 3. Validate against schemas/metafile.v1.schema.json
+is_valid, errors = meta_obj.validate()
+assert is_valid, f"Validation errors: {errors}"
+
+# 4. Comprehensive file audit
+report = validate_file("faktura.pdf", check_hash=True)
+print(f"File valid: {report['valid']}, Events: {report['eventsCount']}")
 ```
 
 ---
