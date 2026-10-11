@@ -7,3 +7,11 @@ htmlcov/
 *.egg-info/
 dist/
 build/
+
+# Canonical linked delivery checkouts and bounded operational evidence.
+/.worktrees/
+/.subactor/leases/
+/.subactor/sessions/
+/.subactor/recovery/
+/.subactor/receipts/
+/.subactor/cache/

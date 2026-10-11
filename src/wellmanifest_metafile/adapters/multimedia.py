@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import io
+from importlib import import_module
 from pathlib import Path
 from typing import Optional
 
@@ -43,11 +44,10 @@ def write_mp3_metafile(file_path: Path | str, meta: Metafile) -> None:
 
 
 # ---------------- FLAC ----------------
-def read_flac_metafile(file_path: Path | str) -> Optional[Metafile]:
+def _read_vorbis_metafile(file_path: Path | str, module: str, name: str) -> Optional[Metafile]:
     path = Path(file_path)
     try:
-        from mutagen.flac import FLAC
-        audio = FLAC(path)
+        audio = getattr(import_module(module), name)(path)
         val = audio.get(TAG_KEY) or audio.get(TAG_KEY.lower())
         if val:
             return Metafile.from_json(val[0])
@@ -56,44 +56,33 @@ def read_flac_metafile(file_path: Path | str) -> Optional[Metafile]:
     return _read_trailer_metafile(path)
 
 
-def write_flac_metafile(file_path: Path | str, meta: Metafile) -> None:
+def read_flac_metafile(file_path: Path | str) -> Optional[Metafile]:
+    return _read_vorbis_metafile(file_path, "mutagen.flac", "FLAC")
+
+
+def _write_vorbis_metafile(file_path: Path | str, meta: Metafile, module: str, name: str) -> None:
     path = Path(file_path)
     try:
-        from mutagen.flac import FLAC
-        audio = FLAC(path)
+        audio = getattr(import_module(module), name)(path)
         audio[TAG_KEY] = meta.to_json()
         audio.save()
         return
     except Exception:
         pass
     _write_trailer_metafile(path, meta)
+
+
+def write_flac_metafile(file_path: Path | str, meta: Metafile) -> None:
+    _write_vorbis_metafile(file_path, meta, "mutagen.flac", "FLAC")
 
 
 # ---------------- OGG ----------------
 def read_ogg_metafile(file_path: Path | str) -> Optional[Metafile]:
-    path = Path(file_path)
-    try:
-        from mutagen.oggvorbis import OggVorbis
-        audio = OggVorbis(path)
-        val = audio.get(TAG_KEY) or audio.get(TAG_KEY.lower())
-        if val:
-            return Metafile.from_json(val[0])
-    except Exception:
-        pass
-    return _read_trailer_metafile(path)
+    return _read_vorbis_metafile(file_path, "mutagen.oggvorbis", "OggVorbis")
 
 
 def write_ogg_metafile(file_path: Path | str, meta: Metafile) -> None:
-    path = Path(file_path)
-    try:
-        from mutagen.oggvorbis import OggVorbis
-        audio = OggVorbis(path)
-        audio[TAG_KEY] = meta.to_json()
-        audio.save()
-        return
-    except Exception:
-        pass
-    _write_trailer_metafile(path, meta)
+    _write_vorbis_metafile(file_path, meta, "mutagen.oggvorbis", "OggVorbis")
 
 
 # ---------------- WAV ----------------
