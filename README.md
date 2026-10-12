@@ -4,6 +4,10 @@
 
 `wellmanifest/metafile` defines the canonical specification and reference implementation for embedding structured, tamper-evident metadata directly into source files (PDF, PNG, JPEG, WebP, TIFF, SVG, EML, Markdown, Audio, Video, Archives).
 
+Validation and adapter reuse stays inside this reference implementation. Public format adapters retain their own metadata keys, codecs, native tag classes and trailer fallback; shared helpers own only equivalent operations. Canonical schemas remain in `schemas/`, with byte-identical package resources.
+
+Verify behavior with `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=src python -m pytest -q`. Verify implementation duplication with `redup check src --ext .py --min-lines 10 --min-sim 0.80 --max-groups 0 --max-lines 0` (Semcod reDUP). These are local checks; independent publication and CI adoption are separate evidence. The cross-repository plan and measurements live in the [canonical harmonization report](https://github.com/subactor/docs/blob/main/architecture/analysis/wellmanifest-standards-harmonization.md).
+
 ---
 
 ## 1. Motivation & Principles

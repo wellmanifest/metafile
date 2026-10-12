@@ -6,7 +6,7 @@ import io
 import json
 import re
 from pathlib import Path
-from typing import Optional
+from typing import Any, Callable, Optional, TextIO
 import xml.etree.ElementTree as ET
 
 import yaml
@@ -32,20 +32,32 @@ def read_json_metafile(file_path: Path | str) -> Optional[Metafile]:
     return None
 
 
-def write_json_metafile(file_path: Path | str, meta: Metafile) -> None:
+def _write_mapping_metafile(
+    file_path: Path | str,
+    meta: Metafile,
+    key: str,
+    load: Callable[[TextIO], Any],
+    dump: Callable[[dict, TextIO], None],
+) -> None:
+    """Preserve mapping content using the format's own codec and metadata key."""
     path = Path(file_path)
     data = {}
     if path.is_file() and path.stat().st_size > 0:
         try:
             with open(path, "r", encoding="utf-8") as f:
-                loaded = json.load(f)
+                loaded = load(f)
                 if isinstance(loaded, dict):
                     data = loaded
         except Exception:
             data = {}
-    data["$metafile"] = meta.to_dict()
+    data[key] = meta.to_dict()
     with open(path, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        dump(data, f)
+
+
+def write_json_metafile(file_path: Path | str, meta: Metafile) -> None:
+    _write_mapping_metafile(file_path, meta, "$metafile", json.load,
+                            lambda data, stream: json.dump(data, stream, indent=2, ensure_ascii=False))
 
 
 def read_jsonl_metafile(file_path: Path | str) -> Optional[Metafile]:
@@ -75,7 +87,8 @@ def read_jsonl_metafile(file_path: Path | str) -> Optional[Metafile]:
     return None
 
 
-def write_jsonl_metafile(file_path: Path | str, meta: Metafile) -> None:
+def _write_comment_metafile(file_path: Path | str, meta: Metafile) -> None:
+    """Replace metadata header lines without altering the remaining records."""
     path = Path(file_path)
     lines = []
     if path.is_file():
@@ -85,6 +98,10 @@ def write_jsonl_metafile(file_path: Path | str, meta: Metafile) -> None:
     with open(path, "w", encoding="utf-8") as f:
         f.write(header)
         f.writelines(lines)
+
+
+def write_jsonl_metafile(file_path: Path | str, meta: Metafile) -> None:
+    _write_comment_metafile(file_path, meta)
 
 
 # ---------------- CSV & TSV ----------------
@@ -103,15 +120,7 @@ def read_csv_metafile(file_path: Path | str) -> Optional[Metafile]:
 
 
 def write_csv_metafile(file_path: Path | str, meta: Metafile) -> None:
-    path = Path(file_path)
-    lines = []
-    if path.is_file():
-        with open(path, "r", encoding="utf-8") as f:
-            lines = [l for l in f if not l.startswith("# wellmanifest:")]
-    header = f"# wellmanifest:{meta.to_json(indent=None)}\n"
-    with open(path, "w", encoding="utf-8") as f:
-        f.write(header)
-        f.writelines(lines)
+    _write_comment_metafile(file_path, meta)
 
 
 # ---------------- XML & SVG ----------------
@@ -173,19 +182,8 @@ def read_yaml_metafile(file_path: Path | str) -> Optional[Metafile]:
 
 
 def write_yaml_metafile(file_path: Path | str, meta: Metafile) -> None:
-    path = Path(file_path)
-    data = {}
-    if path.is_file() and path.stat().st_size > 0:
-        try:
-            with open(path, "r", encoding="utf-8") as f:
-                loaded = yaml.safe_load(f)
-                if isinstance(loaded, dict):
-                    data = loaded
-        except Exception:
-            data = {}
-    data["_metafile"] = meta.to_dict()
-    with open(path, "w", encoding="utf-8") as f:
-        yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+    _write_mapping_metafile(file_path, meta, "_metafile", yaml.safe_load,
+                            lambda data, stream: yaml.safe_dump(data, stream, allow_unicode=True, sort_keys=False))
 
 
 # ---------------- HTML ----------------

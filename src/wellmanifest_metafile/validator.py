@@ -4,7 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Callable, Dict, List, Optional, Tuple, Type, Union
 
 import jsonschema
 from jsonschema import Draft7Validator
@@ -45,16 +45,20 @@ def get_event_schema() -> Dict[str, Any]:
     return _CACHED_EVENT_SCHEMA
 
 
-def validate_metafile(target: Union[Metafile, Dict[str, Any]]) -> Tuple[bool, List[str]]:
-    """Validate a Metafile instance or dictionary against schemas/metafile.v1.schema.json."""
-    if isinstance(target, Metafile):
+def _validate_payload(
+    target: Any,
+    model: Type[Union[Metafile, MetafileEvent]],
+    schema_loader: Callable[[], Dict[str, Any]],
+) -> Tuple[bool, List[str]]:
+    """Share Draft 7 validation while retaining each contract's type and schema."""
+    if isinstance(target, model):
         payload = target.to_dict()
     elif isinstance(target, dict):
         payload = target
     else:
-        return False, [f"Expected Metafile or dict, got {type(target).__name__}"]
+        return False, [f"Expected {model.__name__} or dict, got {type(target).__name__}"]
 
-    schema = get_metafile_schema()
+    schema = schema_loader()
     validator = Draft7Validator(schema)
     errors: List[str] = []
     for err in sorted(validator.iter_errors(payload), key=lambda e: e.path):
@@ -62,25 +66,16 @@ def validate_metafile(target: Union[Metafile, Dict[str, Any]]) -> Tuple[bool, Li
         errors.append(f"[{loc}] {err.message}")
 
     return len(errors) == 0, errors
+
+
+def validate_metafile(target: Union[Metafile, Dict[str, Any]]) -> Tuple[bool, List[str]]:
+    """Validate a Metafile instance or dictionary against schemas/metafile.v1.schema.json."""
+    return _validate_payload(target, Metafile, get_metafile_schema)
 
 
 def validate_event(target: Union[MetafileEvent, Dict[str, Any]]) -> Tuple[bool, List[str]]:
     """Validate a MetafileEvent instance or dictionary against schemas/metafile.event.schema.json."""
-    if isinstance(target, MetafileEvent):
-        payload = target.to_dict()
-    elif isinstance(target, dict):
-        payload = target
-    else:
-        return False, [f"Expected MetafileEvent or dict, got {type(target).__name__}"]
-
-    schema = get_event_schema()
-    validator = Draft7Validator(schema)
-    errors: List[str] = []
-    for err in sorted(validator.iter_errors(payload), key=lambda e: e.path):
-        loc = ".".join(str(p) for p in err.path) if err.path else "root"
-        errors.append(f"[{loc}] {err.message}")
-
-    return len(errors) == 0, errors
+    return _validate_payload(target, MetafileEvent, get_event_schema)
 
 
 def validate_file(file_path: Union[Path, str], check_hash: bool = False) -> Dict[str, Any]:

@@ -54,7 +54,7 @@ def write_gif_metafile(file_path: Path | str, meta: Metafile) -> None:
 
 
 # ---------------- TIFF ----------------
-def read_tiff_metafile(file_path: Path | str) -> Optional[Metafile]:
+def _read_exif_metafile(file_path: Path | str) -> Optional[Metafile]:
     path = Path(file_path)
     try:
         with Image.open(path) as img:
@@ -73,6 +73,10 @@ def read_tiff_metafile(file_path: Path | str) -> Optional[Metafile]:
     return _read_trailer_metafile(path)
 
 
+def read_tiff_metafile(file_path: Path | str) -> Optional[Metafile]:
+    return _read_exif_metafile(file_path)
+
+
 def write_tiff_metafile(file_path: Path | str, meta: Metafile) -> None:
     path = Path(file_path)
     try:
@@ -89,21 +93,7 @@ def write_tiff_metafile(file_path: Path | str, meta: Metafile) -> None:
 
 # ---------------- WebP ----------------
 def read_webp_metafile(file_path: Path | str) -> Optional[Metafile]:
-    path = Path(file_path)
-    try:
-        with Image.open(path) as img:
-            exif = img.getexif()
-            if exif:
-                for tag_id in (37510, 270):
-                    val = exif.get(tag_id)
-                    if val:
-                        if isinstance(val, bytes):
-                            val = val.decode("utf-8", errors="replace")
-                        if "wellmanifest" in val or "docId" in val:
-                            return Metafile.from_json(val)
-    except Exception:
-        pass
-    return _read_trailer_metafile(path)
+    return _read_exif_metafile(file_path)
 
 
 def write_webp_metafile(file_path: Path | str, meta: Metafile) -> None:
